@@ -1,7 +1,8 @@
 ﻿#include"sqlite3.h"
 #include"Database.h"
 #include<iostream>
-#include<string>
+
+enum{five = 5, ten = 10, fifteen = 15, thirty = 30, sixty = 60};
 
 static sqlite3* OpenDataBaseConnection(){
     sqlite3* db;
@@ -46,21 +47,29 @@ bool SaveRecordToSQLite(const char *timeStr, int duration){
     if (!db) {
         return false;
     }
-    std::string insertSQL = std::string("INSERT INTO focus_records (complete_time, duration_minutes) VALUES ('") + timeStr + "'," + std::to_string(duration) + ");";
-
-    char* errmsg = 0;
-    int rc = sqlite3_exec(db, insertSQL.c_str(), 0, 0, &errmsg);
-
-    bool success = true;
-    if (rc != SQLITE_OK) {
-        std::cerr << "插入失败" << errmsg << "\n";
-        sqlite3_free(errmsg);
-        success = false;
-    } else {
-        std::cout << "插入成功！\n记录时间: " << timeStr << "时长: " << duration << "分钟\n";
+    sqlite3_stmt* stmt = nullptr;
+    const char* insertSQL = "INSERT INTO focus_records (complete_time, duration_minutes) VALUES (? , ? );";
+    if (sqlite3_prepare_v2(db, insertSQL, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "插入语句准备失败: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_close(db);
+        return false;
     }
+
+    sqlite3_bind_text(stmt, 1, timeStr, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, duration);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        std::cerr << "插入失败: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_close(db);
+        return false;
+    }
+
+    std::cout << "插入成功！\n记录时间: " << timeStr << "时长: " << duration << "分钟\n";
     sqlite3_close(db);
-    return success;
+    return true;
 }
 
 void PrintAllRecord(){
@@ -87,4 +96,39 @@ void PrintAllRecord(){
 
     sqlite3_finalize(stmt);
     sqlite3_close(db);
+}
+
+bool DeleterRecord(int id){
+    sqlite3* db = OpenDataBaseConnection();
+    if (!db) {
+        return false;
+    }
+    
+    const char* DeleteSQL = "DELETE FROM focus_records WHERE id = ?;";
+
+    sqlite3_stmt* stmt = nullptr;
+    if (sqlite3_prepare_v2(db, DeleteSQL, -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "准备删除语句失败: " << sqlite3_errmsg(db) << "\n";
+        sqlite3_close(db);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    if (rc != SQLITE_DONE) {
+        std::cerr << "删除失败" << sqlite3_errmsg(db) << "\n";
+        sqlite3_close(db);
+        return false;
+    }
+    int affect = sqlite3_changes(db);
+    if(affect == 0){
+        std::cout << "没有找到 id = " << id << "的记录\n";
+        sqlite3_close(db);
+        return false;
+    }
+    std::cout << "成功删除 id = " << id << "的记录\n";
+    sqlite3_close(db);
+    return true;
 }

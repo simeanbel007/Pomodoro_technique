@@ -6,7 +6,7 @@
 #include <chrono>
 #include <stdio.h>
 #include <string>
-#include <thread>
+#include <cstdlib>
 
 //tm_year + 1900才是现在的时间 tm_mon + 1
 //		timeInfo.tm_year + 1900, //今年
@@ -16,11 +16,7 @@
 //      timeInfo.tm_min, //分钟
 //      timeInfo.tm_sec //秒
 
-//void tomatoClock_Menu(){
-//	std::cout << "----------------------------\n";
-//	std::cout << "            番茄钟\n";
-//	std::cout << "\t1、\n";
-//}
+enum{five = 5, ten = 10, fifteen = 15, thirty = 30, sixty = 60};
 
 auto GetNowTimes_return(){
 	struct tm timeInfo;
@@ -45,21 +41,106 @@ std::string format_TimeString(){
 	return std::string(InsertTime);
 }
 
+void fixedTimeTomato() {
+	system("cls");
+	int choice = 0;
+	std::cout << "\t你需要多长时间的番茄钟? \n";
+	std::cout << "\t1、5分钟\t2、十分钟\t3、十五分钟\t4、三十分钟\t5、六十分钟\n";
+	std::cin >> choice;
+	switch (choice) {
+		case 1:{
+			SaveRecordToSQLite(format_TimeString().c_str(), five);
+			break;
+		}
+		case 2:{
+			SaveRecordToSQLite(format_TimeString().c_str(), ten);
+			break;
+		}
+		case 3:{
+			SaveRecordToSQLite(format_TimeString().c_str(), fifteen);
+			break;
+		}
+		case 4:{
+			SaveRecordToSQLite(format_TimeString().c_str(), thirty);
+			break;
+		}
+		case 5:{
+			SaveRecordToSQLite(format_TimeString().c_str(), sixty);
+			break;
+		}
+	}
+}
+
+void autoTimeTomato() {
+	system("cls");
+	int choice = 0;
+	std::cout << "\t你需要多长时间的番茄钟? (直接输入时间即可)\n";
+	std::cin >> choice;
+	SaveRecordToSQLite(format_TimeString().c_str(), choice);
+}
+
+void exitprogram(){
+	std::cout << "欢迎下次使用！\n";
+	std::exit(0);
+}
+
+void tomatoClock_Menu(){
+	std::cout << "--------------------------------------\n";
+	std::cout << "\t 欢迎使用番茄钟\n";
+	std::cout << "1、创建一个固定时间的番茄钟\n";
+	std::cout << "2、创建一个自定义时间的番茄钟\n";
+	std::cout << "3、查询所有已存储的番茄钟\n";
+	std::cout << "4、删除指定已存储的番茄钟\n";
+	std::cout << "5、退出\n";
+	std::cout << "--------------------------------------\n";
+}
+
+void tomatoClock_Choice(int i){
+	switch (i) {
+		case 1: {
+			fixedTimeTomato();
+			break;
+		}
+		case 2: {
+			autoTimeTomato();
+			break;
+		}
+		case 3: {
+			PrintAllRecord();
+			system("pause");
+			break;
+		}
+		case 4: {
+			int delid = 0;
+			PrintAllRecord();
+			std::cout << "你想删除哪个时间？\n";
+			std::cin >> delid;
+			DeleterRecord(delid);
+			system("pause");
+			break;
+		}
+		case 5:{
+			exitprogram();
+			break;
+		}
+		default: {
+			std::cout << "重新选择！\n";
+			break;
+		}
+	}
+}
+
 int main() {
 	if (!InitDataBase()) {
 		std::cerr << "数据库初始化失败，程序退出。\n";
 		return -1;
 	}
-	std::cout << "你需要多长时间的番茄钟？\n";
-	int min = 0;
-reinput:
-	std::cin >> min;
-	if (min < 3) {
-		std::cout << "重新输入！\n";
-		goto reinput;
+	int user_Choice = 0;
+	while (1) {
+		system("cls");
+		tomatoClock_Menu();
+		std::cin >> user_Choice;
+		tomatoClock_Choice(user_Choice);
 	}
-	std::string nowTime = format_TimeString();
-	SaveRecordToSQLite(nowTime.c_str(), min);
-	PrintAllRecord();
 	return 0;
 }
