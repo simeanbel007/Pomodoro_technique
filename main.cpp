@@ -1,4 +1,5 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
+﻿#include <ostream>
+#define _CRT_SECURE_NO_WARNINGS
 #define InsertSize 30
 #include "Database.h"
 #include <ctime>
@@ -7,7 +8,7 @@
 #include <stdio.h>
 #include <string>
 #include <cstdlib>
-
+#include <thread>
 //tm_year + 1900才是现在的时间 tm_mon + 1
 //		timeInfo.tm_year + 1900, //今年
 //      timeInfo.tm_mon + 1, //本月
@@ -15,6 +16,8 @@
 //      timeInfo.tm_hour, //小时
 //      timeInfo.tm_min, //分钟
 //      timeInfo.tm_sec //秒
+
+unsigned int user_Choice_countDown = 0;
 
 enum{five = 5, ten = 10, fifteen = 15, thirty = 30, sixty = 60};
 
@@ -41,6 +44,46 @@ std::string format_TimeString(){
 	return std::string(InsertTime);
 }
 
+void countDownMenu(double num){
+	std::cout << "\r";
+	if (num < 20) {
+		std::cout << "|----------------------| 0% ";
+	}else if (num < 40) {
+		std::cout << "|====>-----------------| 20% ";
+	}else if (num < 60) {
+		std::cout << "|========>-------------| 40% ";
+	}else if (num < 80) {
+		std::cout << "|=============>--------| 60% ";
+	}else if (num < 100) {
+		std::cout << "|================>-----| 80% ";
+	}else if (num == 100) {
+		std::cout << "|======================| 100% ";
+	}else {
+		std::cout << "计时结束！";
+	}
+	std::cout << std::flush;
+}
+
+void countDown_running(){
+	auto total = std::chrono::minutes(user_Choice_countDown);
+	auto start = std::chrono::steady_clock::now();
+
+	while (1) {
+		auto nowtime = std::chrono::steady_clock::now();
+		auto difference = nowtime - start;
+
+		if (difference >= total) {
+			countDownMenu(100);
+			break;
+		}
+		countDownMenu(std::chrono::duration<double>(difference).count() / std::chrono::duration<double>(total).count() * 100.0);
+		std::this_thread::sleep_for(std::chrono::seconds(3));
+	}
+	std::cout << "\n";
+	user_Choice_countDown = 0;
+}
+
+
 void fixedTimeTomato() {
 	system("cls");
 	int choice = 0;
@@ -49,22 +92,32 @@ void fixedTimeTomato() {
 	std::cin >> choice;
 	switch (choice) {
 		case 1:{
+			user_Choice_countDown = five;
+			countDown_running();
 			SaveRecordToSQLite(format_TimeString().c_str(), five);
 			break;
 		}
 		case 2:{
+			user_Choice_countDown = ten;
+			countDown_running();
 			SaveRecordToSQLite(format_TimeString().c_str(), ten);
 			break;
 		}
 		case 3:{
+			user_Choice_countDown = fifteen;
+			countDown_running();
 			SaveRecordToSQLite(format_TimeString().c_str(), fifteen);
 			break;
 		}
 		case 4:{
+			user_Choice_countDown = thirty;
+			countDown_running();
 			SaveRecordToSQLite(format_TimeString().c_str(), thirty);
 			break;
 		}
 		case 5:{
+			user_Choice_countDown = sixty;
+			countDown_running();
 			SaveRecordToSQLite(format_TimeString().c_str(), sixty);
 			break;
 		}
@@ -74,9 +127,19 @@ void fixedTimeTomato() {
 void autoTimeTomato() {
 	system("cls");
 	int choice = 0;
+reinput:
 	std::cout << "\t你需要多长时间的番茄钟? (直接输入时间即可)\n";
 	std::cin >> choice;
+	if (choice < 1) {
+		std::cout << "输入无效！\n";
+		system("pause");
+		system("cls");
+		goto reinput;
+	}
+	user_Choice_countDown = choice;
+	countDown_running();
 	SaveRecordToSQLite(format_TimeString().c_str(), choice);
+
 }
 
 void exitprogram(){
